@@ -128,12 +128,59 @@ class NeedlemanWunsch:
         
         # TODO: Initialize matrix private attributes for use in alignment
         # create matrices for alignment scores, gaps, and backtracing
-        pass
 
-        
+        #converting strings to list for ease: i added this, this was not here before
+        seqA1 = [i for i in seqA]
+        seqB1 = [i for i in seqB]
+
+        seqA1.insert(0," ")
+        seqB1.insert(0," ")
+
+        #score matrices
+        Ix = np.zeros((len(seqA)+1,len(seqB)+1)) #score of alignment if seqA aligned w gap
+        Iy = np.zeros((len(seqA)+1,len(seqB)+1)) #score of alignment if seqB aligned with gap
+        M = np.zeros((len(seqA)+1,len(seqB)+1)) #score of alignment matrix
+
+        #traceback matrices
+        M_back = np.zeros((len(seqA)+1,len(seqB)+1),dtype=object)
+        Iy_back = np.zeros((len(seqA)+1,len(seqB)+1),dtype=object)
+        Ix_back = np.zeros((len(seqA)+1,len(seqB)+1),dtype=object)
+
+        for i in range(len(seqA)):
+            M[i+1][0] = self.gap_open + (i * self.gap_extend)
+            Ix[i+1][0] = np.NINF
+            Iy[i+1][0] = np.NINF
+
+        for j in range(len(seqB)):
+            M[0][j+1] = self.gap_open + (j * self.gap_extend)
+            Ix[0][j+1] = np.NINF
+            Iy[0][j+1] = np.NINF
+
+        M[0][0] = 0
         # TODO: Implement global alignment here
-        pass      		
-        		    
+        def score(x,y):
+            if x==y:
+                return 1
+            else:
+                return 0
+        
+        for i in range(1,len(seqA)+1):
+            for j in range(1,len(seqB)+1):
+                #print(Ix[i-1][j])
+                Ix[i][j] = max(M[i-1][j] + self.gap_open + self.gap_extend, Ix[i-1][j] + self.gap_extend) 
+                Iy[i][j] = max(M[i][j-1] + self.gap_open + self.gap_extend, Iy[i][j-1] + self.gap_extend)
+                M[i][j] = max((M[i-1][j-1] + score(seqA1[i], seqB1[j])), Ix[i][j], Iy[i][j]) #M[i-1][j]+self.gap_open, M[i][j-1]+self.gap_open) 
+                Ix_back[i][j] = (i-1, j) if M[i-1][j] + self.gap_open + self.gap_extend > Ix[i-1][j] + self.gap_extend else (i-1, j) 
+                Iy_back[i][j] = (i, j-1) if M[i][j-1] + self.gap_open + self.gap_extend > Iy[i][j-1] + self.gap_extend else (i, j-1)
+                if M[i][j] == M[i-1][j-1] + score(seqA1[i], seqB1[j]):
+                    M_back[i][j] = (i-1, j-1)
+                elif M[i][j] == Ix[i][j]:
+                    M_back[i][j] = M_back[i][j]
+                else:
+                    M_back[i][j] = M_back[i][j]
+        print(Ix)
+        print(Iy)
+        print(M)
         return self._backtrace()
 
     def _backtrace(self) -> Tuple[float, str, str]:
@@ -193,3 +240,12 @@ def read_fasta(fasta_file: str) -> Tuple[str, str]:
             elif is_header and not first_header:
                 break
     return seq, header
+
+nw = NeedlemanWunsch(sub_matrix_file="./substitution_matrices/PAM100.mat", gap_open=-1, gap_extend=-1)
+
+# Assuming you have two sequences seqA and seqB to align
+seqA = "MYQR"
+seqB = "MYR"
+
+# Call the align method with the two sequences
+alignment_score = nw.align(seqA, seqB)
